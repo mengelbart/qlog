@@ -1,190 +1,109 @@
 package qlog
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
-
-	"github.com/francoispqt/gojay"
+	"strings"
 )
 
 type QLOGFile struct {
-	QLOGVersion string
-	QLOGFormat  string
-	Title       string
-	Description string
-	Summary     Summary
-	Traces      Traces
-}
-
-func (f *QLOGFile) UnmarshalJSONObject(dec *gojay.Decoder, k string) error {
-	switch k {
-	case "qlog_version":
-		return dec.String(&f.QLOGVersion)
-	case "qlog_format":
-		return dec.String(&f.QLOGFormat)
-	case "title":
-		return dec.String(&f.Title)
-	case "description":
-		return dec.String(&f.Description)
-	case "summary":
-		return dec.Object(&f.Summary)
-	case "traces":
-		return dec.Array(&f.Traces)
-	}
-	return nil
-}
-
-func (f *QLOGFile) NKeys() int {
-	return 6
+	QLOGVersion string  `json:"qlog_version"`
+	QLOGFormat  string  `json:"qlog_format"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Summary     Summary `json:"summary"`
+	Traces      Traces  `json:"traces"`
 }
 
 type Summary struct {
-	TraceCount          uint32
-	MaxDuration         uint64
-	MaxOutgoingLossRate float64
-	TotalEventCount     uint64
-	ErrorCount          uint64
-}
-
-func (s *Summary) UnmarshalJSONObject(dec *gojay.Decoder, k string) error {
-	switch k {
-	case "trace_count":
-		return dec.Uint32(&s.TraceCount)
-	case "max_duration":
-		return dec.Uint64(&s.MaxDuration)
-	case "max_outgoing_loss_rate":
-		return dec.Float64(&s.MaxOutgoingLossRate)
-	case "total_event_count":
-		return dec.Uint64(&s.TotalEventCount)
-	case "error_count":
-		return dec.Uint64(&s.ErrorCount)
-	}
-	return nil
-}
-
-func (s *Summary) NKeys() int {
-	return 5
+	TraceCount          uint32  `json:"trace_count"`
+	MaxDuration         uint64  `json:"max_duration"`
+	MaxOutgoingLossRate float64 `json:"max_outgoing_loss_rate"`
+	TotalEventCount     uint64  `json:"total_event_count"`
+	ErrorCount          uint64  `json:"error_count"`
 }
 
 type Traces []Trace
 
-func (t *Traces) UnmarshalJSONArray(dec *gojay.Decoder) error {
-	trace := Trace{}
-	if err := dec.Object(&trace); err != nil {
-		return err
-	}
-	*t = append(*t, trace)
-	return nil
-}
-
 type Trace struct {
-	Title         string
-	Description   string
-	Configuration Configuration
-	CommonFields  CommonFields
-	VantagePoint  VantagePoint
-	EventFields   EventFields
-	Events        Events
+	*TraceError
+	*TraceObject
 }
 
-func (t *Trace) UnmarshalJSONObject(dec *gojay.Decoder, k string) error {
-	switch k {
-	case "title":
-		return dec.String(&t.Title)
-	case "description":
-		return dec.String(&t.Description)
-	case "configuration":
-		return dec.Object(&t.Configuration)
-	case "common_fields":
-		t.CommonFields = CommonFields{}
-		return dec.Object(&t.CommonFields)
-	case "vantage_point":
-		return dec.Object(&t.VantagePoint)
-	case "event_fields":
-		return dec.Array(&t.EventFields)
-	case "events":
-		t.Events = Events{}
-		if t.EventFields != nil {
-			t.Events.Fields = t.EventFields
-		}
-		if t.CommonFields != nil {
-			t.Events.CommonFields = t.CommonFields
-		}
-		return dec.Array(&t.Events)
-	}
-	return nil
-}
-
-func (t Trace) NKeys() int {
-	return 6
-}
-
-type OriginalURIs []string
-
-func (u *OriginalURIs) UnmarshalJSONArray(dec *gojay.Decoder) error {
-	str := ""
-	if err := dec.String(&str); err != nil {
+func (t *Trace) UnmarshalJSON(bytes []byte) error {
+	tmp := struct {
+		ErrorDescription string       `json:"error_description"`
+		EventFields      EventFields  `json:"event_fields"`
+		CommonFields     CommonFields `json:"common_fields"`
+	}{}
+	if err := json.Unmarshal(bytes, &tmp); err != nil {
 		return err
 	}
-	*u = append(*u, str)
+	if len(tmp.ErrorDescription) > 0 {
+		var e TraceError
+		if err := json.Unmarshal(bytes, &e); err != nil {
+			return err
+		}
+		t.TraceError = &e
+		t.TraceObject = nil
+	} else {
+		var o TraceObject
+		o.EventFields = tmp.EventFields
+		o.Events = Events{Fields: tmp.EventFields, CommonFields: tmp.CommonFields}
+		if err := json.Unmarshal(bytes, &o); err != nil {
+			return err
+		}
+		t.TraceError = nil
+		t.TraceObject = &o
+	}
 	return nil
+}
+
+type TraceError struct {
+	ErrorDescription string       `json:"error_description"`
+	URI              string       `json:"uri"`
+	VantagePoint     VantagePoint `json:"vantage_point"`
+}
+
+type TraceObject struct {
+	Title         string        `json:"title"`
+	Description   string        `json:"description"`
+	Configuration Configuration `json:"configuration"`
+	CommonFields  CommonFields  `json:"common_fields"`
+	VantagePoint  VantagePoint  `json:"vantage_point"`
+	EventFields   EventFields   `json:"event_fields"`
+	Events        Events        `json:"events"`
 }
 
 type Configuration struct {
-	TimeOffset   float64      `json:"time_offset"`
-	OriginalURIs OriginalURIs `json:"original_ur_is"`
+	TimeOffset   float64  `json:"time_offset"`
+	OriginalURIs []string `json:"original_uris"`
 
 	// TODO: Implement custom fields?
 	// https://tools.ietf.org/html/draft-marx-qlog-main-schema-02#section-3.3.1.3
 }
 
-func (c *Configuration) UnmarshalJSONObject(dec *gojay.Decoder, k string) error {
-	switch k {
-	case "time_offset":
-		return dec.Float64(&c.TimeOffset)
-	case "original_uris":
-		return dec.Array(&c.OriginalURIs)
-	}
-	return nil
-}
-
-func (c Configuration) NKeys() int {
-	return 2
-}
+type CommonFields map[string]interface{}
 
 type VantagePoint struct {
-	Name string
-	Type VantagePointType
-	Flow VantagePointType
+	Name string           `json:"Name"`
+	Type VantagePointType `json:"type"`
+	Flow VantagePointType `json:"flow"`
 }
 
-func (v *VantagePoint) UnmarshalJSONObject(dec *gojay.Decoder, k string) error {
-	switch k {
-	case "name":
-		return dec.String(&v.Name)
-	case "type":
-		s := ""
-		if err := dec.String(&s); err != nil {
-			return err
-		}
-		v.Type = VantagePointType(s)
-		if !v.Type.isValid() {
-			return fmt.Errorf("invalid vantage point: %v", v.Type)
-		}
-	case "flow":
-		s := ""
-		if err := dec.String(&s); err != nil {
-			return err
-		}
-		v.Flow = VantagePointType(s)
-		if !v.Flow.isValid() {
-			return fmt.Errorf("invalid vantage point: %v", v.Type)
-		}
+type VantagePointType string
+
+func (t *VantagePointType) UnmarshalJSON(bytes []byte) error {
+	var str string
+	if err := json.Unmarshal(bytes, &str); err != nil {
+		return err
 	}
+	if !VantagePointType(str).isValid() {
+		return errors.New("invalid vantage point")
+	}
+	*t = VantagePointType(str)
 	return nil
-}
-
-func (v *VantagePoint) NKeys() int {
-	return 3
 }
 
 const (
@@ -194,141 +113,524 @@ const (
 	UnknownVantagePoint VantagePointType = "unknown"
 )
 
-type VantagePointType string
-
 func (t VantagePointType) isValid() bool {
 	return t == Server || t == Client || t == Network || t == UnknownVantagePoint
 }
 
-type CommonFields map[string]interface{}
-
-func (c CommonFields) UnmarshalJSONObject(dec *gojay.Decoder, k string) error {
-	var str interface{}
-	err := dec.Interface(&str)
-	if err != nil {
-		return err
-	}
-	c[k] = str
-	return nil
-}
-
-// we return 0, it tells the Decoder to decode all keys
-func (c CommonFields) NKeys() int {
-	return 0
-}
-
 type EventFields []string
-
-func (f *EventFields) UnmarshalJSONArray(dec *gojay.Decoder) error {
-	str := ""
-	if err := dec.String(&str); err != nil {
-		return err
-	}
-	*f = append(*f, str)
-	return nil
-}
 
 type Events struct {
 	Fields       EventFields
-	Events       []Event
 	CommonFields CommonFields
+
+	Events []EventWrapper `json:"events"`
 }
 
-func (e *Events) UnmarshalJSONArray(dec *gojay.Decoder) error {
-	if e.Fields != nil {
-		event := Event{Fields: e.Fields}
-		if err := dec.Array(&event); err != nil {
-			return err
-		}
-		for k, v := range e.CommonFields {
-			switch k {
-			case "ODCID":
-				event.ODCID = v.(string)
-			case "group_id":
-				event.GroupID = v.(string)
-			case "reference_time":
-				event.ReferenceTime = v.(float64)
-			}
-		}
-		(*e).Events = append((*e).Events, event)
-		return nil
-	}
+var eventFields EventFields
+var commonFields CommonFields
 
-	event := Event{}
-	if err := dec.Object(&event); err != nil {
+func (e *Events) UnmarshalJSON(bs []byte) error {
+	eventFields = e.Fields
+	commonFields = e.CommonFields
+	err := json.Unmarshal(bs, &e.Events)
+	if err != nil {
 		return err
 	}
-	(*e).Events = append((*e).Events, event)
 	return nil
+}
+
+type EventWrapper struct {
+	Fields       EventFields
+	CommonFields CommonFields
+	*Event
+}
+
+func (e *EventWrapper) UnmarshalJSON(bs []byte) error {
+	e.Fields = eventFields
+	e.CommonFields = commonFields
+	var x interface{}
+	if err := json.Unmarshal(bs, &x); err != nil {
+		return err
+	}
+	switch v := x.(type) {
+	case []interface{}:
+		js := make(map[string]interface{})
+		for i, x := range v {
+			js[e.Fields[i]] = x
+		}
+		object, err := json.Marshal(js)
+		if err != nil {
+			return err
+		}
+		var event Event
+		name, err := getEventNameArray(e.Fields, v)
+		if err != nil {
+			return err
+		}
+		event.Name = name
+		event.fillCommonFields(e.CommonFields)
+		err = json.Unmarshal(object, &event)
+		if err != nil {
+			return err
+		}
+		e.Event = &event
+	case map[string]interface{}:
+		var event Event
+		name, err := getEventName(v)
+		if err != nil {
+			return err
+		}
+		event.Name = name
+		event.Data = Data{Name: name}
+		event.fillCommonFields(e.CommonFields)
+		err = json.Unmarshal(bs, &event)
+		if err != nil {
+			return err
+		}
+		e.Event = &event
+	default:
+		fmt.Printf("%T: %v\n", v, v)
+	}
+	return nil
+}
+
+func indexOf(x string, ls EventFields) int {
+	for i, e := range ls {
+		if e == x {
+			return i
+		}
+	}
+	return -1
+}
+
+func getEventNameArray(fields EventFields, values []interface{}) (string, error) {
+	m := make(map[string]interface{})
+	nameFields := []string{"name", "category", "event", "type"}
+	for _, n := range nameFields {
+		if i := indexOf(n, fields); i >= 0 {
+			m[n] = values[i]
+		}
+	}
+	return getEventName(m)
+}
+
+func getEventName(data map[string]interface{}) (string, error) {
+	var name string
+	if n, ok := data["name"]; ok {
+		if s, ok := n.(string); ok {
+			name = s
+		}
+	}
+	if strings.Contains(name, ":") {
+		return name, nil
+	}
+
+	var category string
+	if c, ok := data["category"]; ok {
+		if s, ok := c.(string); ok {
+			category = s
+		}
+	}
+
+	var event string
+	if e, ok := data["event"]; ok {
+		if s, ok := e.(string); ok {
+			event = s
+		}
+	}
+
+	var eventType string
+	if t, ok := data["type"]; ok {
+		if s, ok := t.(string); ok {
+			eventType = s
+		}
+	}
+
+	if len(event) <= 0 && len(eventType) <= 0 {
+		return "", fmt.Errorf("invalid event Name: Name=%v, category=%v, event=%v, type=%v", name, category, event, eventType)
+	}
+
+	if len(event) > 0 {
+		return fmt.Sprintf("%v:%v", category, event), nil
+	}
+
+	return fmt.Sprintf("%v:%v", category, eventType), nil
 }
 
 type Event struct {
 	Fields EventFields
 
-	Time          float64
-	ReferenceTime float64
-	Category      string
-	Name          string
-	Data          Data
+	Time float64 `json:"time"`
+	Name string  `json:"Name"`
+	Data Data    `json:"data"`
 
-	ProtocolType string
-	GroupID      string
-	TimeFormat   string
-	ODCID        string
+	ProtocolType string `json:"protocol_type"`
+	GroupID      string `json:"group_id"`
+	TimeFormat   string `json:"time_format"`
+
+	ReferenceTime float64 `json:"reference_time"`
+	RelativeTime  float64 `json:"relative_time"`
+	ODCID         string  `json:"odcid"`
 }
 
-func (e *Event) UnmarshalJSONArray(dec *gojay.Decoder) error {
-
-	f := e.Fields[dec.Index()]
-	switch f {
-	case "relative_time":
-		return dec.Float64(&e.Time)
-	case "category":
-		return dec.String(&e.Category)
-	case "event":
-		return dec.String(&e.Name)
-	case "data":
-		e.Data = Data{}
-		return dec.Object(&e.Data)
+func (e *Event) fillCommonFields(common map[string]interface{}) {
+	for k, v := range common {
+		switch k {
+		case "ODCID":
+			e.ODCID = v.(string)
+		case "reference_time":
+			e.ReferenceTime = v.(float64)
+		case "group_id":
+			e.GroupID = v.(string)
+		}
 	}
-	return nil
 }
 
-func (e *Event) UnmarshalJSONObject(dec *gojay.Decoder, k string) error {
-	switch k {
-	case "time":
-		return dec.Float64(&e.Time)
-	case "reference_time":
-		return dec.Float64(&e.ReferenceTime)
-	case "name":
-		return dec.String(&e.Name)
-	case "protocol_type":
-		return dec.String(&e.ProtocolType)
-	case "group_id":
-		return dec.String(&e.GroupID)
-	case "time_format":
-		return dec.String(&e.TimeFormat)
-	}
-	return nil
-}
+func (e *Event) UnmarshalJSON(bs []byte) error {
+	eventType := struct {
+		Category  string `json:"category"`
+		Event     string `json:"event"`
+		Name      string `json:"Name"`
+		EventType string `json:"type"`
 
-func (e *Event) NKeys() int {
-	return 0
-}
+		RelativeTime float64 `json:"relative_time"`
+	}{}
 
-type Data map[string]interface{}
-
-func (d Data) UnmarshalJSONObject(dec *gojay.Decoder, k string) error {
-	var str interface{}
-	err := dec.Interface(&str)
+	err := json.Unmarshal(bs, &eventType)
 	if err != nil {
 		return err
 	}
-	d[k] = str
+	name, err := getEventName(map[string]interface{}{
+		"name":     eventType.Name,
+		"category": eventType.Category,
+		"event":    eventType.Event,
+		"type":     eventType.EventType,
+	})
+	if err != nil {
+		return err
+	}
+
+	tmp := struct {
+		Time float64 `json:"time"`
+		Name string  `json:"name"`
+		Data Data    `json:"data"`
+
+		ProtocolType string `json:"protocol_type"`
+		GroupID      string `json:"group_id"`
+		TimeFormat   string `json:"time_format"`
+
+		RelativeTime  float64 `json:"relative_time"`
+		ReferenceTime float64 `json:"reference_time"`
+		ODCID         string  `json:"odcid"`
+	}{
+		Name: name,
+		Data: Data{Name: name},
+	}
+
+	err = json.Unmarshal(bs, &tmp)
+	if err != nil {
+		return err
+	}
+	newEvent := Event{
+		Data:          tmp.Data,
+		Time:          tmp.Time,
+		ProtocolType:  tmp.ProtocolType,
+		GroupID:       tmp.GroupID,
+		TimeFormat:    tmp.TimeFormat,
+		ReferenceTime: tmp.ReferenceTime,
+		RelativeTime:  tmp.RelativeTime,
+		ODCID:         tmp.ODCID,
+	}
+	if len(newEvent.Name) <= 0 {
+		newEvent.Name = e.Name
+	}
+	if newEvent.Time <= 0 {
+		newEvent.Time = e.ReferenceTime + tmp.RelativeTime
+	}
+	if newEvent.ReferenceTime <= 0 {
+		newEvent.ReferenceTime = e.ReferenceTime
+	}
+	if len(newEvent.GroupID) <= 0 {
+		newEvent.GroupID = e.GroupID
+	}
+	if len(newEvent.ODCID) <= 0 {
+		newEvent.ODCID = e.ODCID
+	}
+	*e = newEvent
 	return nil
 }
 
-// we return 0, it tells the Decoder to decode all keys
-func (d Data) NKeys() int {
-	return 0
+type Data struct {
+	Name string
+
+	// Connectivity
+	*ServerListening
+	*ConnectionStarted
+	*ConnectionClosed
+	*ConnectionIDUpdated
+	*SpinBitUpdated
+
+	// Security
+	*KeyUpdated
+	*KeyRetired
+
+	// Transport
+	*VersionInformation
+	*ALPNInformation
+	*ParametersSet
+	*ParametersRestored
+	*PacketSent
+	*PacketReceived
+	*PacketDropped
+	*PacketBuffered
+	*PacketsACKed
+	*DatagramsSent
+	*DatagramsReceived
+	*DatagramDropped
+	*StreamStateUpdated
+	*FramesProcessed
+	*DataMoved
+
+	// Recovery
+	*ParametersSetRecovery
+	*MetricsUpdated
+	*CongestionStateUpdated
+	*LossTimerUpdated
+	*PacketLost
+	*MarkedForRetransmit
+
+	// HTTP3
+}
+
+func (d *Data) UnmarshalJSON(bs []byte) error {
+	switch d.Name {
+	case "security:key_updated":
+		var x KeyUpdated
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.KeyUpdated = &x
+		return nil
+	case "security:key_retired":
+		var x KeyRetired
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.KeyRetired = &x
+		return nil
+	case "transport:version_information":
+		var x VersionInformation
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.VersionInformation = &x
+		return nil
+	case "transport:alpn_information":
+		var x ALPNInformation
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.ALPNInformation = &x
+		return nil
+	case "transport:parameters_set":
+		var x ParametersSet
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.ParametersSet = &x
+		return nil
+	case "transport:parameters_restored":
+		var x ParametersRestored
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.ParametersRestored = &x
+		return nil
+	case "transport:packet_sent":
+		var x PacketSent
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.PacketSent = &x
+		return nil
+	case "transport:packet_received":
+		var x PacketReceived
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.PacketReceived = &x
+		return nil
+	case "transport:packet_dropped":
+		var x PacketDropped
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.PacketDropped = &x
+		return nil
+	case "transport:packet_buffered":
+		var x PacketBuffered
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.PacketBuffered = &x
+		return nil
+	case "transport:packets_acked":
+		var x PacketsACKed
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.PacketsACKed = &x
+		return nil
+	case "transport:datagrams_sent":
+		var x DatagramsSent
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.DatagramsSent = &x
+		return nil
+	case "transport:datagrams_received":
+		var x DatagramsReceived
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.DatagramsReceived = &x
+		return nil
+	case "transport:datagram_dropped":
+		var x DatagramDropped
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.DatagramDropped = &x
+		return nil
+	case "transport:stream_state_updated":
+		var x StreamStateUpdated
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.StreamStateUpdated = &x
+		return nil
+	case "transport:frames_processed":
+		var x FramesProcessed
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.FramesProcessed = &x
+		return nil
+	case "transport:data_moved":
+		var x DataMoved
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.DataMoved = &x
+		return nil
+	case "recovery:parameters_set_recovery":
+		var x ParametersSetRecovery
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.ParametersSetRecovery = &x
+		return nil
+	case "recovery:metrics_updated":
+		var x MetricsUpdated
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.MetricsUpdated = &x
+		return nil
+	case "recovery:congestion_state_updated":
+		var x CongestionStateUpdated
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.CongestionStateUpdated = &x
+		return nil
+	case "recovery:loss_timer_updated":
+		var x LossTimerUpdated
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.LossTimerUpdated = &x
+		return nil
+	case "recovery:packet_lost":
+		var x PacketLost
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.PacketLost = &x
+		return nil
+	case "recovery:marked_for_retransmit":
+		var x MarkedForRetransmit
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.MarkedForRetransmit = &x
+		return nil
+	case "connectivity:server_listening":
+		var x ServerListening
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.ServerListening = &x
+		return nil
+	case "transport:connection_started":
+		fallthrough
+	case "connectivity:connection_started":
+		var x ConnectionStarted
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.ConnectionStarted = &x
+		return nil
+	case "connectivity:connection_closed":
+		var x ConnectionClosed
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.ConnectionClosed = &x
+		return nil
+	case "connectivity:connection_id_updated":
+		var x ConnectionIDUpdated
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.ConnectionIDUpdated = &x
+		return nil
+	case "connectivity:spin_bit_updated":
+		var x SpinBitUpdated
+		err := json.Unmarshal(bs, &x)
+		if err != nil {
+			return err
+		}
+		d.SpinBitUpdated = &x
+		return nil
+	default:
+		return fmt.Errorf("unknown event: %v", d.Name)
+	}
 }
