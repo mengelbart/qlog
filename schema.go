@@ -389,7 +389,8 @@ func (e *Event) UnmarshalJSON(bs []byte) error {
 		newEvent.ReferenceTime = e.ReferenceTime
 	}
 	if newEvent.RelativeTime <= 0 {
-		newEvent.RelativeTime = e.Time - e.ReferenceTime
+		// TODO: This obviously only works if e.Time is relative time
+		newEvent.RelativeTime = newEvent.Time
 	}
 	if len(newEvent.GroupID) <= 0 {
 		newEvent.GroupID = e.GroupID
