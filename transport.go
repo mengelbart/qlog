@@ -23,7 +23,7 @@ type ParametersSet struct {
 	OriginalDestinationConnectionID ByteString `json:"original_destination_connection_id"`
 	InitialSourceConnectionID       ByteString `json:"initial_source_connection_id"`
 	RetrySourceConnectionID         ByteString `json:"retry_source_connection_id"`
-	StatelessResetToken             Token      `json:"stateless_reset_token"`
+	StatelessResetToken             ByteString `json:"stateless_reset_token"`
 	DisableActiveMigration          bool       `json:"disable_active_migration"`
 
 	MaxIdleTimeout          uint64 `json:"max_idle_timeout"`

@@ -24,7 +24,7 @@ type RawInfo struct {
 	Length        uint64
 	PayloadLength uint64
 
-	data []byte
+	Data ByteString
 }
 
 type IPAddress string
@@ -38,7 +38,7 @@ func (p *PacketType) UnmarshalJSON(bs []byte) error {
 		return err
 	}
 	switch str {
-	case "initial_packet_type":
+	case "initial":
 		*p = InitialPacketType
 	case "handshake":
 		*p = Handshake
@@ -149,19 +149,12 @@ type PacketHeader struct {
 	DCID          ByteString `json:"dcid"`
 }
 
-type Token string
-
-// TODO: Make token use this struct:
-//type Token struct {
-//	Type    string
-//	Length  uint32
-//	Data    ByteString
-//	Details map[string]interface{}
-//}
-
-//func (t *Token) UnmarshalJSON(i []byte) error {
-//
-//}
+type Token struct {
+	Type    string
+	Length  uint32
+	Data    ByteString
+	Details map[string]interface{}
+}
 
 type KeyType int
 

@@ -1,6 +1,8 @@
 package qlog
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +16,38 @@ type QLOGFile struct {
 	Description string  `json:"description"`
 	Summary     Summary `json:"summary"`
 	Traces      Traces  `json:"traces"`
+}
+
+type QLOGFileNDJSON struct {
+	QLOGFormat  string  `json:"qlog_format"`
+	QLOGVersion string  `json:"qlog_version"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Summary     Summary `json:"summary"`
+	Trace       Trace   `json:"trace"`
+}
+
+func (q *QLOGFileNDJSON) UnmarshalNDJSON(bs []byte) error {
+	reader := bytes.NewReader(bs)
+	scanner := bufio.NewScanner(reader)
+	scanner.Scan()
+	qlogFileNDJSON := scanner.Bytes()
+	err := json.Unmarshal(qlogFileNDJSON, q)
+	if err != nil {
+		return err
+	}
+	for scanner.Scan() {
+		bs := scanner.Bytes()
+		event := EventWrapper{
+			CommonFields: q.Trace.CommonFields,
+		}
+		err := json.Unmarshal(bs, &event)
+		if err != nil {
+			return err
+		}
+		q.Trace.Events.Events = append(q.Trace.Events.Events, event)
+	}
+	return nil
 }
 
 type Summary struct {
@@ -146,8 +180,12 @@ type EventWrapper struct {
 }
 
 func (e *EventWrapper) UnmarshalJSON(bs []byte) error {
-	e.Fields = eventFields
-	e.CommonFields = commonFields
+	if e.Fields == nil {
+		e.Fields = eventFields
+	}
+	if e.CommonFields == nil {
+		e.CommonFields = commonFields
+	}
 	var x interface{}
 	if err := json.Unmarshal(bs, &x); err != nil {
 		return err
@@ -606,6 +644,8 @@ func (d *Data) UnmarshalJSON(bs []byte) error {
 		}
 		d.ConnectionStarted = &x
 		return nil
+	case "transport:connection_closed":
+		fallthrough
 	case "connectivity:connection_closed":
 		var x ConnectionClosed
 		err := json.Unmarshal(bs, &x)

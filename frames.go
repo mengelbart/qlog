@@ -340,7 +340,7 @@ type NewConnectionIDFrame struct {
 	RetirePriorTo       uint32     `json:"retire_prior_to"`
 	ConnectionIdLength  uint8      `json:"connection_id_length"`
 	ConnectionId        ByteString `json:"connection_id"`
-	StatelessResetToken Token      `json:"stateless_reset_token"`
+	StatelessResetToken ByteString `json:"stateless_reset_token"`
 }
 
 type RetireConnectionIDFrame struct {
