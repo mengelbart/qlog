@@ -1,9 +1,9 @@
 package qlog
 
 type VersionInformation struct {
-	ServerVersions ByteString `json:"server_versions"`
-	ClientVersions ByteString `json:"client_versions"`
-	ChosenVersion  ByteString `json:"chosen_version"`
+	ServerVersions []string `json:"server_versions"`
+	ClientVersions []string `json:"client_versions"`
+	ChosenVersion  string   `json:"chosen_version"`
 }
 
 type ALPNInformation struct {

@@ -257,6 +257,47 @@ func TestNDJSON(t *testing.T) {
 										"reference_time": 1608567505940.57,
 									},
 									Event: &Event{
+										Time: 1.051043,
+										Name: "transport:packet_sent",
+										Data: Data{
+											Name: "transport:packet_sent",
+											PacketSent: &PacketSent{
+												Header: PacketHeader{
+													PacketType:   InitialPacketType,
+													PacketNumber: 0,
+													Version:      "1",
+													SCIL:         0,
+													DCIL:         9,
+													DCID:         []byte{0x88, 0x8b, 0x57, 0x82, 0xc6, 0x6a, 0x00, 0x65, 0x40},
+												},
+												Raw: RawInfo{
+													Length:        1252,
+													PayloadLength: 1233,
+												},
+												Frames: []QUICFrame{
+													{
+														CryptoFrame: &CryptoFrame{
+															FrameType: "crypto",
+															Offset:    0,
+															Length:    282,
+														},
+													},
+												},
+											},
+										},
+										ODCID:         "639df456f7bbb76b",
+										GroupID:       "639df456f7bbb76b",
+										ReferenceTime: 1608567505940.57,
+										RelativeTime:  1.051043,
+									},
+								},
+								{
+									CommonFields: CommonFields{
+										"ODCID":          "639df456f7bbb76b",
+										"group_id":       "639df456f7bbb76b",
+										"reference_time": 1608567505940.57,
+									},
+									Event: &Event{
 										Time: 52292.149239,
 										Name: "recovery:loss_timer_updated",
 										Data: Data{

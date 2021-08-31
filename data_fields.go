@@ -21,10 +21,10 @@ func (b *ByteString) UnmarshalJSON(bs []byte) error {
 }
 
 type RawInfo struct {
-	Length        uint64
-	PayloadLength uint64
+	Length        uint64 `json:"length"`
+	PayloadLength uint64 `json:"payload_length"`
 
-	Data ByteString
+	Data ByteString `json:"data"`
 }
 
 type IPAddress string
@@ -142,7 +142,7 @@ type PacketHeader struct {
 	Length        uint16     `json:"length"`
 	PayloadLength uint16     `json:"payload_length"`
 	PacketSize    uint16     `json:"packet_size"`
-	Version       ByteString `json:"version"`
+	Version       string     `json:"version"`
 	SCIL          uint8      `json:"scil"`
 	DCIL          uint8      `json:"dcil"`
 	SCID          ByteString `json:"scid"`
