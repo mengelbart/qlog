@@ -155,135 +155,6 @@ func TestVantagePointType(t *testing.T) {
 	}
 }
 
-func TestTestJSON(t *testing.T) {
-	type args struct {
-		reader io.Reader
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    QLOGFile
-		wantErr bool
-	}{
-		{
-			name: "server.qlog",
-			args: args{
-				reader: mustOpen("server.qlog"),
-			},
-			want: QLOGFile{
-				QLOGVersion: "draft-02-wip",
-				Title:       "quic-go qlog",
-				Traces: Traces{
-					Trace{
-						TraceObject: &TraceObject{
-							VantagePoint: VantagePoint{
-								Type: "server",
-							},
-							CommonFields: CommonFields{
-								"ODCID":          "4375c1a55669d5dec87d34611c2a3d",
-								"group_id":       "4375c1a55669d5dec87d34611c2a3d",
-								"reference_time": 1604843883465.9907,
-							},
-							EventFields: EventFields{
-								"relative_time",
-								"category",
-								"event",
-								"data",
-							},
-							Events: Events{
-								CommonFields: CommonFields{
-									"ODCID":          "4375c1a55669d5dec87d34611c2a3d",
-									"group_id":       "4375c1a55669d5dec87d34611c2a3d",
-									"reference_time": 1604843883465.9907,
-								},
-								Fields: EventFields{
-									"relative_time",
-									"category",
-									"event",
-									"data",
-								},
-								Events: []EventWrapper{
-									{
-										CommonFields: CommonFields{
-											"ODCID":          "4375c1a55669d5dec87d34611c2a3d",
-											"group_id":       "4375c1a55669d5dec87d34611c2a3d",
-											"reference_time": 1604843883465.9907,
-										},
-										Fields: EventFields{
-											"relative_time",
-											"category",
-											"event",
-											"data",
-										},
-										Event: &Event{
-											Time: 1604843883465.9907 + 0.875758,
-											Name: "security:key_updated",
-											Data: Data{
-												Name: "security:key_updated",
-												KeyUpdated: &KeyUpdated{
-													Trigger: "tls",
-													KeyType: ClientHandshakeSecret,
-												},
-											},
-											ODCID:         "4375c1a55669d5dec87d34611c2a3d",
-											GroupID:       "4375c1a55669d5dec87d34611c2a3d",
-											ReferenceTime: 1604843883465.9907,
-										},
-									},
-									{
-										CommonFields: CommonFields{
-											"ODCID":          "4375c1a55669d5dec87d34611c2a3d",
-											"group_id":       "4375c1a55669d5dec87d34611c2a3d",
-											"reference_time": 1604843883465.9907,
-										},
-										Fields: EventFields{
-											"relative_time",
-											"category",
-											"event",
-											"data",
-										},
-										Event: &Event{
-											Time: 1604843883465.9907 + 0.875758,
-											Name: "security:key_updated",
-											Data: Data{
-												Name: "security:key_updated",
-												KeyUpdated: &KeyUpdated{
-													Trigger: "tls",
-													KeyType: ClientHandshakeSecret,
-												},
-											},
-											ODCID:         "4375c1a55669d5dec87d34611c2a3d",
-											GroupID:       "4375c1a55669d5dec87d34611c2a3d",
-											ReferenceTime: 1604843883465.9907,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var got QLOGFile
-			bs, err := ioutil.ReadAll(tt.args.reader)
-			if err != nil {
-				t.Errorf("ioutil.ReadAll() error = %v", err)
-			}
-			err = json.Unmarshal(bs, &got)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("json.Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if diff := cmp.Diff(tt.want, got, cmpopts.IgnoreUnexported()); diff != "" {
-				t.Errorf("json.Unmarshal() mismatch (-want +got):\n%s", diff)
-			}
-		})
-	}
-}
-
 func TestNDJSON(t *testing.T) {
 	type args struct {
 		reader io.Reader
@@ -354,6 +225,7 @@ func TestNDJSON(t *testing.T) {
 										ODCID:         "639df456f7bbb76b",
 										GroupID:       "639df456f7bbb76b",
 										ReferenceTime: 1608567505940.57,
+										RelativeTime:  0.132632,
 									},
 								},
 								{
@@ -375,6 +247,7 @@ func TestNDJSON(t *testing.T) {
 										ODCID:         "639df456f7bbb76b",
 										GroupID:       "639df456f7bbb76b",
 										ReferenceTime: 1608567505940.57,
+										RelativeTime:  0.217112,
 									},
 								},
 								{
@@ -399,6 +272,7 @@ func TestNDJSON(t *testing.T) {
 										ODCID:         "639df456f7bbb76b",
 										GroupID:       "639df456f7bbb76b",
 										ReferenceTime: 1608567505940.57,
+										RelativeTime:  52292.149239,
 									},
 								},
 								{
@@ -421,6 +295,7 @@ func TestNDJSON(t *testing.T) {
 										ODCID:         "639df456f7bbb76b",
 										GroupID:       "639df456f7bbb76b",
 										ReferenceTime: 1608567505940.57,
+										RelativeTime:  52301.71991,
 									},
 								},
 								{
@@ -455,6 +330,7 @@ func TestNDJSON(t *testing.T) {
 										ODCID:         "639df456f7bbb76b",
 										GroupID:       "639df456f7bbb76b",
 										ReferenceTime: 1608567505940.57,
+										RelativeTime:  52301.735405,
 									},
 								},
 							},

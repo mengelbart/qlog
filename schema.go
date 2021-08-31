@@ -34,7 +34,7 @@ func (q *QLOGFileNDJSON) UnmarshalNDJSON(bs []byte) error {
 	qlogFileNDJSON := scanner.Bytes()
 	err := json.Unmarshal(qlogFileNDJSON, q)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal json: '%v': %w", string(qlogFileNDJSON), err)
 	}
 	for scanner.Scan() {
 		bs := scanner.Bytes()
@@ -43,7 +43,7 @@ func (q *QLOGFileNDJSON) UnmarshalNDJSON(bs []byte) error {
 		}
 		err := json.Unmarshal(bs, &event)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to unmarshal json: '%v': %w", string(bs), err)
 		}
 		q.Trace.Events.Events = append(q.Trace.Events.Events, event)
 	}
