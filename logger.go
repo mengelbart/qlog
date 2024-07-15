@@ -21,13 +21,18 @@ type Logger struct {
 
 func NewQLOGHandler(w io.Writer, title, vantagePoint string) *Logger {
 	reference := time.Now()
-	init := false
+	initTime := false
+	initName := false
 	handler := slog.NewJSONHandler(w, &slog.HandlerOptions{
 		AddSource: false,
 		Level:     nil,
 		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
 			switch a.Key {
 			case "msg":
+				if !initName {
+					initName = true
+					return slog.Attr{}
+				}
 				return slog.Attr{
 					Key:   "name",
 					Value: a.Value,
@@ -35,8 +40,8 @@ func NewQLOGHandler(w io.Writer, title, vantagePoint string) *Logger {
 			case "level":
 				return slog.Attr{}
 			case "time":
-				if !init {
-					init = true
+				if !initTime {
+					initTime = true
 					return slog.Attr{}
 				}
 				d := a.Value.Time().Sub(reference)
@@ -47,11 +52,10 @@ func NewQLOGHandler(w io.Writer, title, vantagePoint string) *Logger {
 	})
 	logger := slog.New(handler)
 	logger.LogAttrs(nil, 0, "",
-		slog.String("qlog_version", ""),
-		slog.String("qlog_format", "JSON-SEQ"),
+		slog.String("qlog_version", "draft-02"),
+		slog.String("qlog_format", "NDJSON"),
 		slog.String("title", title),
-		slog.String("traces", ""),
-		slog.Group("traces",
+		slog.Group("trace",
 			slog.Group("vantage_point", slog.String("type", vantagePoint)),
 			slog.Group("common_fields",
 				slog.String("time_format", "relative"),
