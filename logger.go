@@ -19,11 +19,19 @@ type Logger struct {
 	reference time.Time
 }
 
+type jsonSeqWriter struct {
+	writer io.Writer
+}
+
+func (w *jsonSeqWriter) Write(p []byte) (int, error) {
+	return w.writer.Write(append([]byte{'\u001e'}, p...))
+}
+
 func NewQLOGHandler(w io.Writer, title, vantagePoint string) *Logger {
 	reference := time.Now()
 	initTime := false
 	initName := false
-	handler := slog.NewJSONHandler(w, &slog.HandlerOptions{
+	handler := slog.NewJSONHandler(&jsonSeqWriter{writer: w}, &slog.HandlerOptions{
 		AddSource: false,
 		Level:     nil,
 		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
@@ -53,7 +61,7 @@ func NewQLOGHandler(w io.Writer, title, vantagePoint string) *Logger {
 	logger := slog.New(handler)
 	logger.LogAttrs(nil, 0, "",
 		slog.String("qlog_version", "draft-02"),
-		slog.String("qlog_format", "NDJSON"),
+		slog.String("qlog_format", "JSON-SEQ"),
 		slog.String("title", title),
 		slog.Group("trace",
 			slog.Group("vantage_point", slog.String("type", vantagePoint)),
