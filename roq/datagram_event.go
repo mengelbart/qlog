@@ -22,6 +22,11 @@ func (e DatagramPacketEvent) Name() string {
 	return e.Type
 }
 
-func (e DatagramPacketEvent) Attrs() []slog.Attr {
-	return e.Packet.attrs()
+func (e DatagramPacketEvent) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Attr{
+			Key:   "packet",
+			Value: e.Packet.LogValue(),
+		},
+	)
 }

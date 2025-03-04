@@ -2,17 +2,17 @@ package roq
 
 import "log/slog"
 
-type StreamPacketEventType = string
+type StreamPacketEventName = string
 
 const (
-	StreamPacketEventTypeCreated StreamPacketEventType = "stream_packet_created"
-	StreamPacketEventTypeParsed  StreamPacketEventType = "stream_packet_parsed"
+	StreamPacketEventTypeCreated StreamPacketEventName = "stream_packet_created"
+	StreamPacketEventTypeParsed  StreamPacketEventName = "stream_packet_parsed"
 )
 
 type StreamPacketEvent struct {
-	Type     StreamPacketEventType
-	StreamID int64
-	Packet   Packet
+	EventName StreamPacketEventName
+	StreamID  int64
+	Packet    Packet
 }
 
 func (e StreamPacketEvent) Category() string {
@@ -20,12 +20,15 @@ func (e StreamPacketEvent) Category() string {
 }
 
 func (e StreamPacketEvent) Name() string {
-	return e.Type
+	return e.EventName
 }
 
-func (e StreamPacketEvent) Attrs() []slog.Attr {
-	return append(
-		e.Packet.attrs(),
+func (e StreamPacketEvent) LogValue() slog.Value {
+	return slog.GroupValue(
 		slog.Int64("stream_id", e.StreamID),
+		slog.Attr{
+			Key:   "packet",
+			Value: e.Packet.LogValue(),
+		},
 	)
 }
