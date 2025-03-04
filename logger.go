@@ -1,23 +1,11 @@
 package qlog
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"time"
-
-	"github.com/mengelbart/qlog/roq"
 )
-
-type Event interface {
-	Category() string
-	Name() string
-	Attrs() []slog.Attr
-}
-
-type Logger struct {
-	logger    *slog.Logger
-	reference time.Time
-}
 
 type jsonSeqWriter struct {
 	writer io.Writer
@@ -27,7 +15,18 @@ func (w *jsonSeqWriter) Write(p []byte) (int, error) {
 	return w.writer.Write(append([]byte{'\u001e'}, p...))
 }
 
-func NewQLOGHandler(w io.Writer, title, vantagePoint string) *Logger {
+type Event interface {
+	Category() string
+	Name() string
+	slog.LogValuer
+}
+
+type Logger struct {
+	logger    *slog.Logger
+	reference time.Time
+}
+
+func NewQLOGHandler(w io.Writer, title, description, vantagePoint string, schemas ...string) *Logger {
 	reference := time.Now()
 	initTime := false
 	initName := false
@@ -58,11 +57,16 @@ func NewQLOGHandler(w io.Writer, title, vantagePoint string) *Logger {
 			return a
 		},
 	})
+	if schemas == nil {
+		schemas = []string{}
+	}
 	logger := slog.New(handler)
-	logger.LogAttrs(nil, 0, "",
-		slog.String("qlog_version", "draft-02"),
-		slog.String("qlog_format", "JSON-SEQ"),
+	logger.LogAttrs(context.Background(), 0, "",
+		slog.String("file_schema", "urn:ietf:params:qlog:file:sequential"),
+		slog.String("serialization_format", "application/qlog+json-seq"),
 		slog.String("title", title),
+		slog.String("description", description),
+		slog.Any("event_schemas", schemas),
 		slog.Group("trace",
 			slog.Group("vantage_point", slog.String("type", vantagePoint)),
 			slog.Group("common_fields",
@@ -78,62 +82,9 @@ func NewQLOGHandler(w io.Writer, title, vantagePoint string) *Logger {
 }
 
 func (l *Logger) Log(e Event) {
-	anys := []any{}
-	for _, a := range e.Attrs() {
-		anys = append(anys, a)
-	}
-	l.logger.LogAttrs(nil, 0,
+	l.logger.Log(
+		context.Background(), slog.LevelInfo,
 		e.Category()+":"+e.Name(),
-		slog.Group("data", anys...),
-		// e.Attrs()...,
+		"data", e,
 	)
-}
-
-func (l *Logger) RoQStreamOpened(flowID uint64, streamID int64) {
-	l.Log(roq.StreamOpenedEvent{
-		FlowID:   flowID,
-		StreamID: streamID,
-	})
-}
-
-func (l *Logger) RoQStreamPacketCreated(flowID uint64, streamID int64, length int) {
-	l.Log(roq.StreamPacketEvent{
-		Type:     roq.StreamPacketEventTypeCreated,
-		StreamID: streamID,
-		Packet: roq.Packet{
-			FlowID: flowID,
-			Length: length,
-		},
-	})
-}
-
-func (l *Logger) RoQStreamPacketParsed(flowID uint64, streamID int64, length int) {
-	l.Log(roq.StreamPacketEvent{
-		Type:     roq.StreamPacketEventTypeParsed,
-		StreamID: streamID,
-		Packet: roq.Packet{
-			FlowID: flowID,
-			Length: length,
-		},
-	})
-}
-
-func (l *Logger) RoQDatagramPacketCreated(flowID uint64, length int) {
-	l.Log(roq.DatagramPacketEvent{
-		Type: roq.DatagramPacketEventTypeCreated,
-		Packet: roq.Packet{
-			FlowID: flowID,
-			Length: length,
-		},
-	})
-}
-
-func (l *Logger) RoQDatagramPacketParsed(flowID uint64, length int) {
-	l.Log(roq.DatagramPacketEvent{
-		Type: roq.DatagramPacketEventTypeParsed,
-		Packet: roq.Packet{
-			FlowID: flowID,
-			Length: length,
-		},
-	})
 }
