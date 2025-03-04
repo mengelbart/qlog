@@ -2,6 +2,8 @@ package moqt
 
 import (
 	"log/slog"
+
+	"github.com/mengelbart/qlog"
 )
 
 type ControlMessageEventName string
@@ -16,18 +18,24 @@ type ControlMessageEvent struct {
 	StreamID  uint64
 	Length    uint64
 	Message   slog.LogValuer
+	Raw       *qlog.RawInfo
 }
 
 func (e ControlMessageEvent) LogValue() slog.Value {
-	return slog.GroupValue(
+	attrs := []slog.Attr{
 		slog.Uint64("stream_id", e.StreamID),
-		slog.Uint64("length", e.Length),
-		slog.Attr{
-			Key:   "message",
-			Value: e.Message.LogValue(),
-		},
-		// slog.Group("message", slices.Collect(slices.Map(e.Message.Attrs(), func(e slog.Attr) any { return e }))...),
-	)
+	}
+	if e.Length > 0 {
+		attrs = append(attrs, slog.Uint64("length", e.Length))
+	}
+	attrs = append(attrs, slog.Attr{
+		Key:   "message",
+		Value: e.Message.LogValue(),
+	})
+	if e.Raw != nil {
+		attrs = append(attrs, slog.Any("raw", e.Raw))
+	}
+	return slog.GroupValue(attrs...)
 }
 
 // Name implements qlog.Event.

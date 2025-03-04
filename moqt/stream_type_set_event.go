@@ -10,17 +10,21 @@ const (
 )
 
 type StreamTypeSetEvent struct {
-	Owner      Owner
+	Owner      *Owner
 	StreamID   uint64
 	StreamType StreamType
 }
 
 func (e StreamTypeSetEvent) LogValue() slog.Value {
-	return slog.GroupValue(
-		slog.String("owner", string(e.Owner)),
+	attrs := []slog.Attr{}
+	if e.Owner != nil {
+		attrs = append(attrs, slog.String("owner", string(*e.Owner)))
+	}
+	attrs = append(attrs,
 		slog.Uint64("stream_id", e.StreamID),
 		slog.String("stream_type", string(e.StreamType)),
 	)
+	return slog.GroupValue(attrs...)
 }
 
 func (e StreamTypeSetEvent) Name() string {

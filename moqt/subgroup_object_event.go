@@ -16,8 +16,8 @@ const (
 type SubgroupObjectEvent struct {
 	EventName              SubgroupObjectEventName
 	StreamID               uint64
-	GroupID                uint64
-	SubgroupID             uint64
+	GroupID                *uint64
+	SubgroupID             *uint64
 	ObjectID               uint64
 	ExtensionHeadersLength uint64
 	ExtensionHeaders       ExtensionHeaders
@@ -29,14 +29,25 @@ type SubgroupObjectEvent struct {
 func (e SubgroupObjectEvent) LogValue() slog.Value {
 	attrs := []slog.Attr{
 		slog.Uint64("stream_id", e.StreamID),
-		slog.Uint64("group_id", e.StreamID),
-		slog.Uint64("subgroup_id", e.StreamID),
+	}
+	if e.GroupID != nil {
+		attrs = append(attrs, slog.Uint64("group_id", *e.GroupID))
+	}
+	if e.SubgroupID != nil {
+		attrs = append(attrs, slog.Uint64("group_id", *e.SubgroupID))
+	}
+
+	attrs = append(attrs,
 		slog.Uint64("object_id", e.StreamID),
 		slog.Uint64("extension_headers_length", e.ExtensionHeadersLength),
-	}
+	)
+
 	if len(e.ExtensionHeaders) > 0 {
 		attrs = append(attrs, slog.Any("extension_headers", e.ExtensionHeaders))
 	}
+
+	attrs = append(attrs, slog.Uint64("object_payload_length", e.ObjectPayloadLength))
+
 	if e.ObjectPayloadLength == 0 {
 		attrs = append(attrs, slog.Uint64("object_status", e.ObjectStatus))
 	}

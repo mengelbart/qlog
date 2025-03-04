@@ -6,3 +6,7 @@ const (
 	OwnerLocal  Owner = "local"
 	OwnerRemote Owner = "remote"
 )
+
+func GetOwner(o Owner) *Owner {
+	return &o
+}

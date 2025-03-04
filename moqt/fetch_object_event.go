@@ -39,6 +39,9 @@ func (e FetchObjectEvent) LogValue() slog.Value {
 	if len(e.ExtensionHeaders) > 0 {
 		attrs = append(attrs, slog.Any("extension_headers", e.ExtensionHeaders))
 	}
+
+	attrs = append(attrs, slog.Uint64("object_payload_length", e.ObjectPayloadLength))
+
 	if e.ObjectPayloadLength == 0 {
 		attrs = append(attrs, slog.Uint64("object_status", e.ObjectStatus))
 	}
