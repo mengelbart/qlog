@@ -38,7 +38,7 @@ func (e SubgroupObjectEvent) LogValue() slog.Value {
 	}
 
 	attrs = append(attrs,
-		slog.Uint64("object_id", e.StreamID),
+		slog.Uint64("object_id", e.ObjectID),
 		slog.Uint64("extension_headers_length", e.ExtensionHeadersLength),
 	)
 

@@ -30,9 +30,9 @@ type FetchObjectEvent struct {
 func (e FetchObjectEvent) LogValue() slog.Value {
 	attrs := []slog.Attr{
 		slog.Uint64("stream_id", e.StreamID),
-		slog.Uint64("group_id", e.StreamID),
-		slog.Uint64("subgroup_id", e.StreamID),
-		slog.Uint64("object_id", e.StreamID),
+		slog.Uint64("group_id", e.GroupID),
+		slog.Uint64("subgroup_id", e.SubgroupID),
+		slog.Uint64("object_id", e.ObjectID),
 		slog.Any("publisher_priority", e.PublisherPriority),
 		slog.Uint64("extension_headers_length", e.ExtensionHeadersLength),
 	}
