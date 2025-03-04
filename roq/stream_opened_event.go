@@ -4,7 +4,7 @@ import "log/slog"
 
 type StreamOpenedEvent struct {
 	FlowID   uint64
-	StreamID int64
+	StreamID uint64
 }
 
 func (e StreamOpenedEvent) Category() string {
@@ -15,9 +15,9 @@ func (e StreamOpenedEvent) Name() string {
 	return "stream_opened"
 }
 
-func (e StreamOpenedEvent) Attrs() []slog.Attr {
-	return []slog.Attr{
+func (e StreamOpenedEvent) LogValue() slog.Value {
+	return slog.GroupValue(
 		slog.Uint64("flow_id", e.FlowID),
-		slog.Int64("stream_id", e.StreamID),
-	}
+		slog.Uint64("stream_id", e.StreamID),
+	)
 }

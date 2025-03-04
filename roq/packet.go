@@ -1,15 +1,24 @@
 package roq
 
-import "log/slog"
+import (
+	"log/slog"
+
+	"github.com/mengelbart/qlog"
+)
 
 type Packet struct {
 	FlowID uint64
-	Length int
+	Length uint64
+	Raw    *qlog.RawInfo
 }
 
-func (p *Packet) attrs() []slog.Attr {
-	return []slog.Attr{
+func (p *Packet) LogValue() slog.Value {
+	attrs := []slog.Attr{
 		slog.Uint64("flow_id", p.FlowID),
-		slog.Int("length", p.Length),
+		slog.Uint64("length", p.Length),
 	}
+	if p.Raw != nil {
+		slog.Any("raw", p.Raw)
+	}
+	return slog.GroupValue(attrs...)
 }
