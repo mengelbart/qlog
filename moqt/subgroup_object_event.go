@@ -34,7 +34,7 @@ func (e SubgroupObjectEvent) LogValue() slog.Value {
 		attrs = append(attrs, slog.Uint64("group_id", *e.GroupID))
 	}
 	if e.SubgroupID != nil {
-		attrs = append(attrs, slog.Uint64("group_id", *e.SubgroupID))
+		attrs = append(attrs, slog.Uint64("subgroup_id", *e.SubgroupID))
 	}
 
 	attrs = append(attrs,
