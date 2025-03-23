@@ -70,8 +70,11 @@ func NewQLOGHandler(w io.Writer, title, description, vantagePoint string, schema
 		slog.Group("trace",
 			slog.Group("vantage_point", slog.String("type", vantagePoint)),
 			slog.Group("common_fields",
-				slog.String("time_format", "relative"),
-				slog.Float64("reference_time", float64(reference.UnixNano())/1e6),
+				slog.String("time_format", "relative_to_epoch"),
+				slog.Group("reference_time",
+					slog.String("clock_type", "system"),
+					slog.String("epoch", reference.Format(time.RFC3339)),
+				),
 			),
 		),
 	)
